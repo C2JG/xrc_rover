@@ -1,88 +1,55 @@
-# Xplore - ROS Humble Assignment
+# XRC Rover – Logiciel de contrôle ROS 2
 
-Welcome to the Xplore ROS Humble Stack assignment! This assignment is designed to help you get acquainted with ROS (Robot Operating System) using Docker, while building foundational skills that are crucial for developing a rover. This assignment is divided into three levels, each with specific objectives and tasks.
+Stack logicielle d'un **rover à 6 roues avec bras robotisé**, développée en équipe dans le cadre d'**EPFL Xplore**. Le projet tourne sous **ROS 2 Humble** dans Docker. Il couvre la chaîne complète : la manette, la machine à états, la cinématique, la communication série avec les microcontrôleurs, la vision et la localisation.
 
-We are looking for motivated people, we will not judge you on the quality of the work. We only want to see your motivation and autonomy. There is no mandatory level required, go as far as you can!
+ # Mon rôle :
+   - integration de la manette avec le repo ui
+   - cinematique des roues et cinematique inverse du bras
+   - Données capteurs : publication des mesures des capteurs ultrasons et du gyroscope sur des topics ROS 2, pour que l’interface ou n’importe quel autre module    puisse s’y abonner et les utiliser.
+   - pris part à la conception du fichier rover.urdf.xacro, qui décrit la structure du rover (châssis, roues, bras, capteurs) et les liaisons entre ses pièces, pour la visualisation et la navigation.
 
-## Table of Contents
+## Équipe
 
-- [Introduction](#introduction)
-- [Assignment Levels](#assignment-levels)
-  - [Level 1: Introduction and Setup](#level-1-introduction-and-setup)
-  - [Level 2: Package Creation and Communication](#level-2-package-creation-and-communication)
-  - [Level 3: Custom Services and Integration](#level-3-custom-services-and-integration)
-- [Useful Resources](#useful-resources)
-- [Useful Commands](#useful-commands)
+- [@AquIce](https://github.com/AquIce)
+- [@C2JG](https://github.com/C2JG)
 
-## Introduction
+## Fonctionnalités
 
-In this assignment, you will:
+- **Pilotage manuel à la manette** : les commandes de la manette sont converties en ordres pour les roues et pour le bras.
+- **Machine à états (FSM)** avec les états `BOOTING`, `MANUAL`, `AUTOMATIC` et `FAIL`, plus un arrêt d'urgence.
+- **Cinématique des roues** : direction de type Ackermann sur 6 roues (vitesse de chaque roue et angle des 4 roues directrices).
+- **Bras robotisé à 2 segments** : cinématique inverse, rotation de la base et commande de la pince.
+- **Communication série en C++** avec les cartes électroniques : moteurs DC, servomoteurs et capteurs.
+- **Vision** :
+  - flux vidéo caméra en GStreamer/H.264 (mode navigation ou autonomie) ;
+  - estimation de profondeur avec **MiDaS** et détection d'objets avec **YOLOv8**, pour générer un nuage de points ;
+  - détection de **marqueurs ArUco** pour se repérer.
+- **Localisation** : odométrie des roues, puis un **filtre de Kalman étendu (EKF)** qui fusionne roues, IMU et vision.
+- **Sécurité** : alerte d'obstacle à partir de capteurs ultrasons.
+- **Navigation** : modèle URDF du rover, fichiers de lancement et configuration **Nav2**.
 
-1. Set up your environment with Docker and ROS Humble (and understand what the hell they are?!).
-2. Create ROS packages and understand the basics of publisher-subscriber communication.
-3. Develop a custom ROS service and integrate it with a subscriber.
+## Architecture
 
-These tasks are designed to simulate real-world challenges you might face while working on the Xplore rover project. By the end of this assignment, you should have a solid understanding of ROS basics and be well-prepared to contribute to our team.
+```
+Manette ──► gamepad_publisher ──► fsm_node ──► wheels_manager ──► serial_link (C++) ──► moteurs / servos
+                         └──────► arm_manager ──────────────────────┘
+Caméra ──► camera_publisher ──► vision / aruco_detector ──┐
+Roues ──► odometry_manager ───────────────────────────────┼──► ekf_node ──► /odom + TF
+IMU ──────────────────────────────────────────────────────┘
+Ultrasons ──► ultrasonic_node ──► alerte FSM
+```
 
-> [!NOTE]
-> Though you might not directly work on ROS (for example if you do Machine Learning), these knowledge will be extremely useful to integrate your code in the pipeline.
+## Structure du dépôt
 
-## Assignment Levels
+| Dossier | Contenu |
+|---|---|
+| `rover_commands/` | Package ROS 2 principal en Python : nœuds, cinématique, EKF, URDF, launch files, config Nav2 |
+| `serial_link/` | Nœuds C++ qui communiquent en série avec les microcontrôleurs (DC, servos, capteurs) |
+| `custom_msg/` | Messages et services ROS personnalisés (`MoveData`, `DCSpeed`, `MPUData`, `GamepadData`…) |
+| `docker_humble_desktop/` | Image Docker ROS 2 Humble et scripts de build et de lancement (Linux, Mac, Windows) |
+| `docs/` | Guides d'installation et commandes utiles |
 
-### Level 1: Introduction and Setup
+## Technologies
 
-**Objectives:**
+ROS 2 Humble · Python · C++ · Docker · OpenCV · PyTorch (MiDaS, YOLOv8) · GStreamer · Nav2 · URDF/Xacro
 
-- Install Docker.
-- Install ROS Humble using Docker.
-- Test a built-in ROS command.
-- Understand the concept of ROS and its advantages.
-
-Detailed instructions for Level 1 can be found in the [Level 1 file](./docs/Level1.md).
-
-### Level 2: Package Creation and Communication
-
-**Objectives:**
-
-- Create a ROS package inside the Docker image.
-- Implement a simple publisher and subscriber.
-
-Detailed instructions for Level 2 can be found in the [Level 2 file](./docs/Level2.md).
-
-### Level 3: Custom Services and Integration
-
-**Objectives:**
-
-- Create a custom ROS service that triggers a console print and returns a result.
-- Integrate the service with a subscriber.
-
-Detailed instructions for Level 3 can be found in the [Level 3 file](./docs/Level3.md).
-
-## Installation
-
-You will need to fork the repository, and install Docker. Follow the procedure for your system:
-
-[Windows](./docs/InstallWindows.md) | [Mac M1](./docs/InstallMac.md) | [Ubuntu](./docs/InstallLinux.md)
-
-## Troubleshooting
-
-If you have any trouble or problem with the assignement, do not hesitate to ask questions. Post a new question on the Issue tab of the GitHub repository.
-
-[+ Create Issue](https://github.com/EPFLXplore/ROS_Software_Assignement/issues/new/choose)
-
-## Useful Resources
-
-Here are some resources to help you throughout the assignment:
-
-- [ROS 2 Documentation](https://docs.ros.org/en/humble/index.html)
-- [ROS 2 Tutorials](https://docs.ros.org/en/humble/Tutorials.html)
-- [ROS 2 Youtube Tutorials](https://www.youtube.com/watch?v=0aPbWsyENA8&list=PLLSegLrePWgJudpPUof4-nVFHGkB62Izy)
-- [Docker Documentation](https://docs.docker.com/)
-
-## Useful Commands
-
-We have compiled a list of useful Linux, Docker, and ROS commands to assist you with the assignment. These can be found in the [`UsefulCommands.md`](./docs/UsefulCommands.md). file.
-
-Good luck, and we look forward to meeting you and seeing your progress during the interview!
-
-![Gif](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZTZib3ZmdWVtdGNyOGxtaWw2aHVwcDd5OTI3bXM1ZWZpNzczM3ZjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VbnUQpnihPSIgIXuZv/giphy.gif)
